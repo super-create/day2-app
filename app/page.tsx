@@ -28,7 +28,7 @@ export default function HomePage() {
 
   const increment = async () => {
     const next = count + 1
-    setCount(next) // optimistic UI
+    setCount(next)
 
     const { error } = await supabase
       .from('counter')
@@ -37,7 +37,6 @@ export default function HomePage() {
 
     if (error) {
       console.log('update error:', error)
-      // revert if update fails
       setCount(count)
       return
     }
