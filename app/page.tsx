@@ -2,44 +2,44 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { supabase } from '../lib/supabase'
 
 export default function HomePage() {
   const [count, setCount] = useState<number>(0)
   const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
 
   const fetchCount = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('counter')
-      .select('value')
-      .eq('id', 1)
-      .single()
+    setError(null)
 
-    if (error) {
-      console.log('fetch error:', error)
+    const res = await fetch('/api/counter')
+
+    if (!res.ok) {
+      setError('Could not load counter')
       setLoading(false)
       return
     }
 
-    setCount(data?.value ?? 0)
+    const data = await res.json()
+    setCount(data.value ?? 0)
     setLoading(false)
   }
 
   const increment = async () => {
-    const next = count + 1
-    setCount(next)
+    setLoading(true)
+    setError(null)
 
-    const { error } = await supabase
-      .from('counter')
-      .update({ value: next })
-      .eq('id', 1)
+    const res = await fetch('/api/counter/increment', { method: 'POST' })
 
-    if (error) {
-      console.log('update error:', error)
-      setCount(count)
+    if (!res.ok) {
+      setError('Could not update counter')
+      setLoading(false)
       return
     }
+
+    const data = await res.json()
+    setCount(data.value ?? count)
+    setLoading(false)
   }
 
   useEffect(() => {
@@ -49,6 +49,8 @@ export default function HomePage() {
   return (
     <div>
       <h1>Persistent Counter</h1>
+
+      {error && <p style={{ color: 'red' }}>{error}</p>}
 
       <p>{loading ? 'Loading...' : `Count: ${count}`}</p>
 
