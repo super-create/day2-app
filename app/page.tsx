@@ -3,69 +3,150 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 
+type ErrorState = 'UNAUTH' | 'GENERIC' | null
+
 export default function HomePage() {
   const [count, setCount] = useState<number>(0)
   const [loading, setLoading] = useState<boolean>(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ErrorState>(null)
 
-  const fetchCount = async () => {
-    setLoading(true)
-    setError(null)
+  // optional: show who is logged in
+  const [meEmail, setMeEmail] = useState<string | null>(null)
 
-    const res = await fetch('/api/counter')
 
-    if (!res.ok) {
-      setError('Could not load counter')
-      setLoading(false)
-      return
-    }
-
-    const data = await res.json()
-    setCount(data.value ?? 0)
-    setLoading(false)
+  async function logout() {
+    await fetch('/api/logout', { method: 'POST' })
+    window.location.href = '/login'
   }
 
-  const increment = async () => {
+
+  async function loadMe() {
+    try {
+      const res = await fetch('/api/me', { cache: 'no-store' })
+      if (!res.ok) {
+        setMeEmail(null)
+        return
+      }
+      const data = await res.json()
+      setMeEmail(data?.user?.email ?? null)
+    } catch {
+      setMeEmail(null)
+    }
+  }
+
+  async function loadCounter() {
     setLoading(true)
     setError(null)
 
-    const res = await fetch('/api/counter/increment', { method: 'POST' })
+    try {
+      const res = await fetch('/api/counter', { cache: 'no-store' })
 
-    if (!res.ok) {
-      setError('Could not update counter')
+      if (res.status === 401) {
+        setError('UNAUTH')
+        setLoading(false)
+        setCount(0)
+        return
+      }
+
+      if (!res.ok) {
+        setError('GENERIC')
+        setLoading(false)
+        return
+      }
+
+      const data = await res.json()
+      setCount(typeof data.value === 'number' ? data.value : 0)
       setLoading(false)
-      return
+    } catch {
+      setError('GENERIC')
+      setLoading(false)
     }
+  }
 
-    const data = await res.json()
-    setCount(data.value ?? count)
-    setLoading(false)
+  async function increment() {
+    setLoading(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/counter/increment', {
+        method: 'POST',
+        cache: 'no-store',
+      })
+
+      if (res.status === 401) {
+        setError('UNAUTH')
+        setLoading(false)
+        return
+      }
+
+      if (!res.ok) {
+        setError('GENERIC')
+        setLoading(false)
+        return
+      }
+
+      const data = await res.json()
+      setCount(typeof data.value === 'number' ? data.value : count)
+      setLoading(false)
+    } catch {
+      setError('GENERIC')
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    fetchCount()
+    // load identity first so UI shows logged-in state quickly
+    loadMe()
+    loadCounter()
   }, [])
 
   return (
-    <div>
+    <div style={{ padding: 24 }}>
       <h1>Persistent Counter</h1>
 
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+      <div style={{ marginBottom: 12 }}>
+        {meEmail ? (
+          <p>Logged in as: <b>{meEmail}</b></p>
+        ) : (
+          <p>Not logged in</p>
+        )}
+        {meEmail && (
+          <button onClick={logout} style={{ marginTop: 8 }}>
+            Log out
+          </button>
+        )}
 
-      <p>{loading ? 'Loading...' : `Count: ${count}`}</p>
+      </div>
 
-      <button onClick={increment} disabled={loading}>
+      {error === 'UNAUTH' && (
+        <div style={{ marginBottom: 12 }}>
+          <p style={{ color: 'orange' }}>
+            You’re logged out. Please log in to use the counter.
+          </p>
+          <Link href="/login">Go to Login</Link>
+        </div>
+      )}
+
+      {error === 'GENERIC' && (
+        <p style={{ color: 'red' }}>
+          Could not load counter
+        </p>
+      )}
+
+      <p>Count: {count}</p>
+
+      <button onClick={increment} disabled={loading || error === 'UNAUTH'}>
         Increase (and save)
       </button>
 
-      <div style={{ marginTop: 16 }}>
-        <Link href="/about">Go to About</Link>
+      <div style={{ marginTop: 12 }}>
+        <button onClick={() => { loadMe(); loadCounter() }} disabled={loading}>
+          Refresh
+        </button>
       </div>
 
-      <div style={{ marginTop: 16 }}>
-        <button onClick={fetchCount} disabled={loading}>
-          Refresh from DB
-        </button>
+      <div style={{ marginTop: 12 }}>
+        <Link href="/about">Go to About</Link>
       </div>
     </div>
   )

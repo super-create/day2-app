@@ -1,27 +1,34 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export async function GET() {
+  const supabase = await createSupabaseServerClient()
+
+  const { data: userData, error: userErr } = await supabase.auth.getUser()
+  if (userErr || !userData?.user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const userId = userData.user.id
+
   const { data, error } = await supabase
-    .from('counter')
+    .from('counters')
     .select('value')
-    .eq('id', 1)
+    .eq('user_id', userId)
     .single()
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  // no row yet -> create it
+  if (error && error.code === 'PGRST116') {
+    const { data: inserted, error: insErr } = await supabase
+      .from('counters')
+      .insert({ user_id: userId, value: 0 })
+      .select('value')
+      .single()
+
+    if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
+    return NextResponse.json({ value: inserted.value })
   }
-  if (error || !data) {
-  return NextResponse.json(
-    { error: 'Counter not found' },
-    { status: 404 }
-  )}
 
-
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ value: data.value })
 }
