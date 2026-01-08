@@ -61,3 +61,79 @@ Used in API routes with session cookies. RLS is always on.
 Not used in this project yet.
 Reserved for future admin/background tasks only.
 Forbidden for user-owned data paths.
+
+
+Admin vs User Boundary (Frozen)
+
+This system enforces a strict separation between user-scoped actions and admin/system actions.
+
+User actions
+
+Initiated by the browser
+
+Identity derived only from the session cookie
+
+Handled by Next.js API routes
+
+Always scoped by auth.uid()
+
+Enforced by Row Level Security (RLS)
+
+Never use service role credentials
+
+Never accept userId from the client
+
+If identity matters, RLS must be the final authority.
+
+Admin / system actions
+
+Initiated by the server only
+
+No browser context
+
+No user impersonation
+
+May use service role credentials
+
+Reserved for:
+
+background jobs
+
+webhooks
+
+migrations
+
+system-wide maintenance
+
+Admin paths are not shortcuts for user logic.
+
+Architectural Invariants (Do Not Violate)
+
+The frontend is untrusted
+
+The backend derives identity
+
+The database enforces ownership
+
+Middleware is UX, not security
+
+There is one source of truth per responsibility
+
+No feature may bypass the flow:
+Browser → API → Database (RLS)
+
+Any change that violates these rules is a bug, not a feature.
+
+Growth Without Entropy
+
+Before adding new systems (payments, jobs, webhooks):
+
+Existing boundaries must remain intact
+
+No duplicate sources of truth may be introduced
+
+No “temporary” shortcuts are allowed
+
+If something feels unclear, reduce scope instead of adding abstraction
+
+Infrastructure is considered frozen unless explicitly changed on purpose.
