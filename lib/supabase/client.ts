@@ -6,3 +6,6 @@ export function createSupabaseBrowserClient() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
 }
+
+// Browser client: AUTH UI ONLY.
+// Never use this client for direct database reads/writes in the app.

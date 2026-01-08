@@ -21,3 +21,6 @@ export async function createSupabaseServerClient() {
     }
   )
 }
+
+// Server client: user-scoped via cookies, RLS enforced.
+// IMPORTANT: Must use ANON key only. Never service role in user routes.

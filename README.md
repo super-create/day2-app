@@ -40,3 +40,24 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - Verified no code paths reference legacy `counter` table
 - Dropped `counter` table from Supabase
 - Confirmed app functions unchanged using `counters` table
+
+# Environment Contract
+
+## Browser (public)
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+Used only for auth UI. Never for database reads/writes.
+
+## Server (user-scoped, RLS enforced)
+- SUPABASE_URL
+- SUPABASE_ANON_KEY
+
+Used in API routes with session cookies. RLS is always on.
+
+## Server (admin)
+- SUPABASE_SERVICE_ROLE_KEY
+
+Not used in this project yet.
+Reserved for future admin/background tasks only.
+Forbidden for user-owned data paths.
